@@ -21,11 +21,12 @@
 
 BEGIN
 {
+        bio_cmd[0] = "0";
         bio_cmd[1] = "Read";
         bio_cmd[2] = "Write";
-        bio_cmd[4] = "Delete";
-        bio_cmd[8] = "Getattr";
-        bio_cmd[16] = "Flush";
+        bio_cmd[3] = "Delete";
+        bio_cmd[4] = "Getattr";
+        bio_cmd[5] = "Flush";
 }
 
 fbt::g_disk_start:entry
@@ -52,7 +53,8 @@ fbt::g_disk_done:entry
         @end = count();
 }
 
-tick-5s
+/* tick-5s */
+tick-1s
 {
         printf("Latencies (ms)\n\n");
         printa("%s %s %@d\n", @lat);

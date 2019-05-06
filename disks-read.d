@@ -27,7 +27,48 @@ BEGIN
         bio_cmd[3] = "Delete";
         bio_cmd[4] = "Getattr";
         bio_cmd[5] = "Flush";
+	min_ns = 1000000;
 }
+
+fbt::zfs_freebsd_read:entry, fbt::zfs_freebsd_write:entry
+/this->fi_name != "unknown" && execname != "python3.7"/
+{
+
+    /* http://svn0.us-west.freebsd.org/base/vendor/dtracetoolkit/dist/Snippits/fd2pathname.txt
+    this->filep =
+    curthread->t_procp->p_user.u_finfo.fi_list[this->fd].uf_file;
+    this->vnodep = this->filep != 0 ? this->filep->f_vnode : 0;
+    self->vpath = this->vnodep ? (this->vnodep->v_path != 0 ?
+        cleanpath(this->vnodep->v_path) : "<unknown>") : "<unknown>";*/
+
+    this->vp = args[0]->a_vp;
+    this->ncp = this->vp != NULL ? (&(this->vp->v_cache_dst) != NULL ?
+            this->vp->v_cache_dst.tqh_first : 0) : 0;
+    this->fi_name = this->ncp ? (this->ncp->nc_name != 0 ?
+            stringof(this->ncp->nc_name) : "<unknown>") : "<unknown>";
+
+    self->path = this->fi_name; /* args[0]->v_path; */
+    /*printf("0x%x", args[0]); */
+    /* TODO Put kb back in... */
+    /*self->kb = args[1]->uio_resid / 1024;*/
+    self->start = timestamp;
+}
+
+fbt::zfs_freebsd_read:return, fbt::zfs_freebsd_write:return
+/self->start && (timestamp - self->start) >= min_ns && execname != "python3.7"/
+{
+    this->iotime = (timestamp - self->start) / 1000000;
+    this->dir = probefunc == "zfs_freebsd_read" ? "R" : "W";
+/*    printf("%-20Y %-16s %1s %4d %6d %s\n", walltimestamp,
+            execname, this->dir, 0, this->iotime,
+            self->path != NULL ? stringof(self->path) : "<null>"); */
+        @zlat[stringof(execname), "read_or_write"] = quantize(this->iotime);
+}
+fbt::zfs_freebsd_read:return, fbt::zfs_freebsd_write:return
+{
+    self->path = 0; self->kb = 0; self->start = 0;
+}
+
 
 fbt::g_disk_start:entry
 /args[0]->bio_cmd == 1/
@@ -50,17 +91,18 @@ fbt::g_disk_done:entry
 (args[0]->bio_cmd == 1)/
 {
         this->op = bio_cmd[this->bio->bio_cmd];
-        @lat[stringof(this->name), this->op] = quantize((timestamp - this->ts)/1000);
+        @lat[stringof(this->name), this->op] = quantize((timestamp - this->ts)/(1000*1000));
         @iosize[stringof(this->name), this->op] = quantize(this->bio->bio_bcount);
         ddn[this->bio->bio_data, stringof(this->name), this->bio->bio_cmd] = 0;
         @end = count();
 }
 
-tick-5s
+tick-10s
 /* tick-1s */
 {
-        printf("Latencies (ms)\n\n");
+        printf("Latencies (ns)\n\n");
         printa("%s %s %@d\n", @lat);
+        printa("%s %s %@d\n", @zlat);
         /*printf("IO sizes (bytes)\n\n");
         printa("%s %s %@d\n", @iosize);
         printf("Booking keeping\n");

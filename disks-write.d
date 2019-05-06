@@ -50,7 +50,7 @@ fbt::g_disk_done:entry
 (args[0]->bio_cmd == 2)/
 {
         this->op = bio_cmd[this->bio->bio_cmd];
-        @lat[stringof(this->name), this->op] = quantize((timestamp - this->ts)/1000);
+        @lat[stringof(this->name), this->op] = quantize((timestamp - this->ts)/(1000*1000));
         @iosize[stringof(this->name), this->op] = quantize(this->bio->bio_bcount);
         ddn[this->bio->bio_data, stringof(this->name), this->bio->bio_cmd] = 0;
         @end = count();

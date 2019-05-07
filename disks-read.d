@@ -102,13 +102,13 @@ fbt::nfs_read:return
 
 
 fbt::g_disk_start:entry
-/args[0]->bio_cmd == 1/
+/args[0]->bio_cmd == 1 || args[0]->bio_cmd == 2/
 {
         this->bio = (struct bio *)arg0;
 }
 
 fbt::g_disk_start:entry
-/args[0]->bio_cmd == 1/
+/args[0]->bio_cmd == 1 || args[0]->bio_cmd == 2/
 {
         this->s_name = stringof(this->bio->bio_to->name);
         ddn[this->bio->bio_data, this->s_name, this->bio->bio_cmd] = timestamp;
@@ -119,7 +119,7 @@ fbt::g_disk_done:entry
 /(this->bio = (struct bio *)arg0) &&
 (this->name = this->bio->bio_disk->d_geom->name) &&
 (this->ts = ddn[this->bio->bio_data, stringof(this->name), this->bio->bio_cmd]) &&
-(args[0]->bio_cmd == 1)/
+((args[0]->bio_cmd == 1) || (args[0]->bio_cmd == 2))/
 {
         this->op = bio_cmd[this->bio->bio_cmd];
         @lat[stringof(this->name), this->op] = quantize((timestamp - this->ts)/(1000*1000));

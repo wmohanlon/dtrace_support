@@ -58,16 +58,47 @@ fbt::zfs_freebsd_read:return, fbt::zfs_freebsd_write:return
 /self->start && (timestamp - self->start) >= min_ns && execname != "python3.7"/
 {
     this->iotime = (timestamp - self->start) / 1000000;
-    this->dir = probefunc == "zfs_freebsd_read" ? "R" : "W";
-/*    printf("%-20Y %-16s %1s %4d %6d %s\n", walltimestamp,
-            execname, this->dir, 0, this->iotime,
-            self->path != NULL ? stringof(self->path) : "<null>"); */
-        @zlat[stringof(execname), "read_or_write"] = quantize(this->iotime);
+    this->dir = probefunc == "zfs_freebsd_read" ? "ZFS-R" : "ZFS-W";
+    @zlat[stringof(execname), this->dir] = quantize(this->iotime);
 }
 fbt::zfs_freebsd_read:return, fbt::zfs_freebsd_write:return
 {
     self->path = 0; self->kb = 0; self->start = 0;
 }
+
+
+fbt::nfs_read:entry, fbt::nfs_bwrite:entry
+/this->fi_name != "unknown" && execname != "python3.7"/
+{
+
+    /* http://svn0.us-west.freebsd.org/base/vendor/dtracetoolkit/dist/Snippits/fd2pathname.txt
+    this->filep =
+    curthread->t_procp->p_user.u_finfo.fi_list[this->fd].uf_file;
+    this->vnodep = this->filep != 0 ? this->filep->f_vnode : 0;
+    self->vpath = this->vnodep ? (this->vnodep->v_path != 0 ?
+        cleanpath(this->vnodep->v_path) : "<unknown>") : "<unknown>";*/
+
+    this->fi_name = this->ncp ? (this->ncp->nc_name != 0 ?
+            stringof(this->ncp->nc_name) : "<unknown>") : "<unknown>";
+
+    self->path = this->fi_name; /* args[0]->v_path; */
+    self->start = timestamp;
+}
+
+/*fbt::nfs_read:return, fbt::nfs_bwrite:return*/
+fbt::nfs_read:return
+/self->start && (timestamp - self->start) >= min_ns && execname != "python3.7"/
+{
+    this->iotime = (timestamp - self->start) / 1000000;
+    this->dir = probefunc == "nfs_read" ? "NFS-R" : "NFS-W";
+    @nlat[stringof(execname), this->dir] = quantize(this->iotime);
+}
+/*fbt::nfs_read:return, fbt::nfs_write:return */
+fbt::nfs_read:return
+{
+    self->path = 0; self->kb = 0; self->start = 0;
+}
+
 
 
 fbt::g_disk_start:entry
@@ -100,15 +131,18 @@ fbt::g_disk_done:entry
 tick-10s
 /* tick-1s */
 {
-        printf("Latencies (ns)\n\n");
+        printf("Latencies (ms)\n\n");
         printa("%s %s %@d\n", @lat);
         printa("%s %s %@d\n", @zlat);
+        printa("%s %s %@d\n", @nlat);
         /*printf("IO sizes (bytes)\n\n");
         printa("%s %s %@d\n", @iosize);
         printf("Booking keeping\n");
         printa(@start, @end);*/
         printf("------------------------------------------------\n\n");
         trunc(@lat);
+        trunc(@zlat);
+        trunc(@nlat);
         trunc(@iosize);
         trunc(@start);
         trunc(@end);

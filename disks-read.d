@@ -51,20 +51,22 @@ fbt::zfs_freebsd_read:entry, fbt::zfs_freebsd_write:entry
     /*printf("0x%x", args[0]); */
     /* TODO Put kb back in... */
     /*self->kb = args[1]->uio_resid / 1024;*/
-    self->start = timestamp;
+    self->starttime = timestamp;
 }
 
 fbt::zfs_freebsd_read:return, fbt::zfs_freebsd_write:return
-/self->start && (timestamp - self->start) >= min_ns && execname != "python3.7"/
+/self->starttime && (timestamp - self->starttime) >= min_ns && execname != "python3.7"/
 {
-    this->iotime = (timestamp - self->start) / 1000000;
+    this->iotime = (timestamp - self->starttime) / 1000000;
     this->dir = probefunc == "zfs_freebsd_read" ? "ZFS-R" : "ZFS-W";
     @zlat[stringof(execname), this->dir] = quantize(this->iotime);
 }
 fbt::zfs_freebsd_read:return, fbt::zfs_freebsd_write:return
 {
-    self->path = 0; self->kb = 0; self->start = 0;
+    self->path = 0; self->kb = 0; self->starttime = 0;
+	/* ustack(50,0); */
 }
+
 
 
 fbt::nfs_read:entry, fbt::nfs_bwrite:entry
@@ -82,21 +84,21 @@ fbt::nfs_read:entry, fbt::nfs_bwrite:entry
             stringof(this->ncp->nc_name) : "<unknown>") : "<unknown>";
 
     self->path = this->fi_name; /* args[0]->v_path; */
-    self->start = timestamp;
+    self->starttime2 = timestamp;
 }
 
 /*fbt::nfs_read:return, fbt::nfs_bwrite:return*/
 fbt::nfs_read:return
-/self->start && (timestamp - self->start) >= min_ns && execname != "python3.7"/
+/self->starttime2 && (timestamp - self->starttime2) >= min_ns && execname != "python3.7"/
 {
-    this->iotime = (timestamp - self->start) / 1000000;
+    this->iotime = (timestamp - self->starttime2) / 1000000;
     this->dir = probefunc == "nfs_read" ? "NFS-R" : "NFS-W";
     @nlat[stringof(execname), this->dir] = quantize(this->iotime);
 }
 /*fbt::nfs_read:return, fbt::nfs_write:return */
 fbt::nfs_read:return
 {
-    self->path = 0; self->kb = 0; self->start = 0;
+    self->path = 0; self->kb = 0; self->starttime2 = 0;
 }
 
 

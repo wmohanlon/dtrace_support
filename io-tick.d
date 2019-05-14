@@ -8,6 +8,7 @@ BEGIN
         bio_cmd[3] = "Delete";
         bio_cmd[4] = "Getattr";
         bio_cmd[5] = "Flush";
+        printf("%10s %20s %10s %10s %15s\n", "DEVICE", "APP", "BIO_CMD", "PID", "BYTES");
 }
 
 
@@ -19,7 +20,6 @@ io:::start
 
 tick-5s
 {
-        printf("%10s %20s %10s %10s %15s\n", "DEVICE", "APP", "BIO_CMD", "PID", "BYTES");
         printa("%10s %20s %10s %10d %15@d\n", @);
 	trunc(@);
 }

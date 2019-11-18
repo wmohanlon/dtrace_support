@@ -7,5 +7,5 @@ syscall::unlink:entry
 {
    printf("%s %d %s     ", execname, pid, copyinstr(arg0));
    system("smbstatus -p | grep %d", pid);
-   system("smbstatus -p | grep %d | sed 's-^-unlinked %s -' | logger -p user.crit", pid, copyinstr(arg0));
+   system("smbstatus -p | grep %d | sed 's#^#unlinked %s #' | logger -p user.crit", pid, copyinstr(arg0));
 }

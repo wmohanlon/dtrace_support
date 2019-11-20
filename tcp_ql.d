@@ -25,6 +25,7 @@ dtrace:::BEGIN
 
 /* tcp:::accept-refused, tcp:::accept-established */
 tcp:::accept-refused
+/this->on == 1/
 {
         this->length = args[2]->ip_plength - args[4]->tcp_offset;
         printf("%Y %3d %16s:%-5d %16s %16s:%-5d %6d  (", walltimestamp, cpu,

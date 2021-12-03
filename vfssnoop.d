@@ -1,7 +1,17 @@
 #!/usr/sbin/dtrace -Cs
 
+/*
+ * Acquired from the fantastic FreeBSD Forum Thread, here:
+ * 
+ * https://forums.freebsd.org/threads/sharing-of-dtrace-scripts.32855/
+ * 
+ * Many thanks to all of the posters there.
+ * 
+ */
+
+
 /* 
- * This script make heavy use of the C preposser. Also, since
+ * This script make heavy use of the C preprocessor. Also, since
  * we want to have information on the number of bytes read or
  * write, the entry probes have to be divided into three
  * groups. Otherwise, two groups will suffice. You could add 
@@ -215,3 +225,4 @@ ENTRY_PROBES
 {
 	printf("%s\n", this->fi_name);
 }
+
